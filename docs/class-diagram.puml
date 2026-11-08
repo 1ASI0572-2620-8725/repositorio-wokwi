@@ -1,0 +1,104 @@
+@startuml FreshSenseDevice
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title Dispositivo FreshSense
+
+package "Lectura" {
+  class ClimateSensor {
+    + begin()
+    + read(temperatureC, humidityPct) : bool
+  }
+
+  class EthyleneSensor {
+    + begin()
+    + readPpm() : float
+  }
+
+  class ReadingClock {
+    + begin()
+    + stamp() : String
+  }
+
+  class SensorReading {
+    + deviceId : String
+    + timestamp : String
+    + temperatureC : float
+    + humidityPct : float
+    + ethylenePpm : float
+    + meta : String
+    + isValid() : bool
+    + toJson() : String
+  }
+}
+
+package "Actuadores" {
+  class AlertActuators {
+    + begin()
+    + setAlert(active)
+    + tick()
+  }
+
+  class ColdRoomFan {
+    + begin()
+    + setRunning(running)
+  }
+}
+
+package "Comunicacion" {
+  class DeviceLink {
+    + connectWifi() : bool
+    + postReading(payload) : int
+    + postHeartbeat(payload) : int
+  }
+}
+
+class FreshSenseNode {
+  + begin()
+  + tick()
+}
+
+FreshSenseNode *-- ClimateSensor
+FreshSenseNode *-- EthyleneSensor
+FreshSenseNode *-- ReadingClock
+FreshSenseNode *-- AlertActuators
+FreshSenseNode *-- ColdRoomFan
+FreshSenseNode *-- DeviceLink
+FreshSenseNode ..> SensorReading
+
+ClimateSensor ..> SensorReading : temperatureC\nhumidityPct
+EthyleneSensor ..> SensorReading : ethylenePpm
+ReadingClock ..> SensorReading : timestamp
+SensorReading ..> AlertActuators : etileno > 20 ppm\nHIGH_ETHYLENE
+SensorReading ..> ColdRoomFan : temperatura > 8 C\nTEMP_RISK
+SensorReading ..> DeviceLink : POST lectura\ny heartbeat
+
+note bottom of ClimateSensor
+  DHT22 en GPIO 12.
+  Temperatura y humedad.
+end note
+
+note bottom of EthyleneSensor
+  Sensor de gas en GPIO 34.
+  El informe pide ethylenePpm.
+end note
+
+note bottom of AlertActuators
+  LED rojo en GPIO 27.
+  Bocina en GPIO 25.
+  Avisan que el alimento
+  esta por descomponerse.
+end note
+
+note bottom of ColdRoomFan
+  Rele en GPIO 26.
+  En el prototipo fisico
+  el motor es un ventilador.
+end note
+
+note bottom of DeviceLink
+  POST /api/v1/sensor-readings
+  POST /api/v1/devices/{id}/heartbeat
+end note
+@enduml
